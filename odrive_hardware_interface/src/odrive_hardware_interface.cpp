@@ -50,6 +50,9 @@ CallbackReturn ODriveHardwareInterface::on_init(const hardware_interface::Hardwa
     serial_numbers_[1].emplace_back(std::stoull(joint.parameters.at("serial_number"), 0, 16));
     axes_.emplace_back(std::stoi(joint.parameters.at("axis")));
     enable_watchdogs_.emplace_back(std::stoi(joint.parameters.at("enable_watchdog")));
+    const std::string invert =
+      joint.parameters.count("invert") ? joint.parameters.at("invert") : "false";
+    directions_.emplace_back(invert == "true" || invert == "True" || invert == "1" ? -1.0 : 1.0);
   }
 
   odrive = new ODriveUSB();
@@ -208,7 +211,7 @@ return_type ODriveHardwareInterface::perform_command_mode_switch(
           serial_numbers_[1][i],
           AXIS__CONTROLLER__CONFIG__CONTROL_MODE + per_axis_offset * axes_[i],
           (int32_t)control_level_[i]));
-        input_torque = hw_commands_efforts_[i];
+        input_torque = directions_[i] * hw_commands_efforts_[i];
         CHECK_RW(odrive->write(
           serial_numbers_[1][i], AXIS__CONTROLLER__INPUT_TORQUE + per_axis_offset * axes_[i],
           input_torque));
@@ -225,11 +228,11 @@ return_type ODriveHardwareInterface::perform_command_mode_switch(
           serial_numbers_[1][i],
           AXIS__CONTROLLER__CONFIG__CONTROL_MODE + per_axis_offset * axes_[i],
           (int32_t)control_level_[i]));
-        input_vel = hw_commands_velocities_[i] / 2 / M_PI;
+        input_vel = directions_[i] * hw_commands_velocities_[i] / 2 / M_PI;
         CHECK_RW(odrive->write(
           serial_numbers_[1][i], AXIS__CONTROLLER__INPUT_VEL + per_axis_offset * axes_[i],
           input_vel));
-        input_torque = hw_commands_efforts_[i];
+        input_torque = directions_[i] * hw_commands_efforts_[i];
         CHECK_RW(odrive->write(
           serial_numbers_[1][i], AXIS__CONTROLLER__INPUT_TORQUE + per_axis_offset * axes_[i],
           input_torque));
@@ -247,15 +250,15 @@ return_type ODriveHardwareInterface::perform_command_mode_switch(
           serial_numbers_[1][i],
           AXIS__CONTROLLER__CONFIG__CONTROL_MODE + per_axis_offset * axes_[i],
           (int32_t)control_level_[i]));
-        input_pos = hw_commands_positions_[i] / 2 / M_PI;
+        input_pos = directions_[i] * hw_commands_positions_[i] / 2 / M_PI;
         CHECK_RW(odrive->write(
           serial_numbers_[1][i], AXIS__CONTROLLER__INPUT_POS + per_axis_offset * axes_[i],
           input_pos));
-        input_vel = hw_commands_velocities_[i] / 2 / M_PI;
+        input_vel = directions_[i] * hw_commands_velocities_[i] / 2 / M_PI;
         CHECK_RW(odrive->write(
           serial_numbers_[1][i], AXIS__CONTROLLER__INPUT_VEL + per_axis_offset * axes_[i],
           input_vel));
-        input_torque = hw_commands_efforts_[i];
+        input_torque = directions_[i] * hw_commands_efforts_[i];
         CHECK_RW(odrive->write(
           serial_numbers_[1][i], AXIS__CONTROLLER__INPUT_TORQUE + per_axis_offset * axes_[i],
           input_torque));
@@ -286,17 +289,17 @@ return_type ODriveHardwareInterface::read(const rclcpp::Time &, const rclcpp::Du
     CHECK_RW(odrive->read(
       serial_numbers_[1][i], AXIS__MOTOR__CURRENT_CONTROL__IQ_MEASURED + per_axis_offset * axes_[i],
       Iq_measured));
-    hw_efforts_[i] = Iq_measured * torque_constants_[i];
+    hw_efforts_[i] = directions_[i] * Iq_measured * torque_constants_[i];
 
     CHECK_RW(odrive->read(
       serial_numbers_[1][i], AXIS__ENCODER__VEL_ESTIMATE + per_axis_offset * axes_[i],
       vel_estimate));
-    hw_velocities_[i] = vel_estimate * 2 * M_PI;
+    hw_velocities_[i] = directions_[i] * vel_estimate * 2 * M_PI;
 
     CHECK_RW(odrive->read(
       serial_numbers_[1][i], AXIS__ENCODER__POS_ESTIMATE + per_axis_offset * axes_[i],
       pos_estimate));
-    hw_positions_[i] = pos_estimate * 2 * M_PI;
+    hw_positions_[i] = directions_[i] * pos_estimate * 2 * M_PI;
 
     CHECK_RW(
       odrive->read(serial_numbers_[1][i], AXIS__ERROR + per_axis_offset * axes_[i], axis_error));
@@ -336,19 +339,19 @@ return_type ODriveHardwareInterface::write(const rclcpp::Time &, const rclcpp::D
 
     switch (control_level_[i]) {
       case integration_level_t::POSITION:
-        input_pos = hw_commands_positions_[i] / 2 / M_PI;
+        input_pos = directions_[i] * hw_commands_positions_[i] / 2 / M_PI;
         CHECK_RW(odrive->write(
           serial_numbers_[1][i], AXIS__CONTROLLER__INPUT_POS + per_axis_offset * axes_[i],
           input_pos));
 
       case integration_level_t::VELOCITY:
-        input_vel = hw_commands_velocities_[i] / 2 / M_PI;
+        input_vel = directions_[i] * hw_commands_velocities_[i] / 2 / M_PI;
         CHECK_RW(odrive->write(
           serial_numbers_[1][i], AXIS__CONTROLLER__INPUT_VEL + per_axis_offset * axes_[i],
           input_vel));
 
       case integration_level_t::EFFORT:
-        input_torque = hw_commands_efforts_[i];
+        input_torque = directions_[i] * hw_commands_efforts_[i];
         CHECK_RW(odrive->write(
           serial_numbers_[1][i], AXIS__CONTROLLER__INPUT_TORQUE + per_axis_offset * axes_[i],
           input_torque));

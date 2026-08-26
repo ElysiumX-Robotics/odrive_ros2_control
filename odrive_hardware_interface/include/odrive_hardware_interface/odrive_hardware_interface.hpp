@@ -91,6 +91,7 @@ private:
   std::vector<int> axes_;
   std::vector<float> torque_constants_;
   std::vector<bool> enable_watchdogs_;
+  std::vector<double> directions_;
 
   std::vector<double> hw_vbus_voltages_;
 
