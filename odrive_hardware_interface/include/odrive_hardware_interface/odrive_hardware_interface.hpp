@@ -94,6 +94,7 @@ private:
   std::vector<double> directions_;
 
   std::vector<double> hw_vbus_voltages_;
+  std::vector<double> hw_ibus_currents_;
 
   std::vector<double> hw_commands_positions_;
   std::vector<double> hw_commands_velocities_;

@@ -27,6 +27,7 @@ CallbackReturn ODriveHardwareInterface::on_init(const hardware_interface::Hardwa
   serial_numbers_.resize(2);
 
   hw_vbus_voltages_.resize(info_.sensors.size(), std::numeric_limits<double>::quiet_NaN());
+  hw_ibus_currents_.resize(info_.sensors.size(), std::numeric_limits<double>::quiet_NaN());
 
   hw_positions_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
   hw_velocities_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
@@ -108,7 +109,9 @@ std::vector<hardware_interface::StateInterface> ODriveHardwareInterface::export_
   std::vector<hardware_interface::StateInterface> state_interfaces;
   for (size_t i = 0; i < info_.sensors.size(); i++) {
     state_interfaces.emplace_back(hardware_interface::StateInterface(
-      info_.sensors[i].name, "vbus_voltage", &hw_vbus_voltages_[i]));
+      info_.sensors[i].name, "vbus", &hw_vbus_voltages_[i]));
+    state_interfaces.emplace_back(hardware_interface::StateInterface(
+      info_.sensors[i].name, "ibus", &hw_ibus_currents_[i]));
   }
 
   for (size_t i = 0; i < info_.joints.size(); i++) {
@@ -276,10 +279,13 @@ return_type ODriveHardwareInterface::perform_command_mode_switch(
 return_type ODriveHardwareInterface::read(const rclcpp::Time &, const rclcpp::Duration &)
 {
   for (size_t i = 0; i < info_.sensors.size(); i++) {
-    float vbus_voltage;
+    float vbus_voltage, ibus;
 
     CHECK_RW(odrive->read(serial_numbers_[0][i], VBUS_VOLTAGE, vbus_voltage));
     hw_vbus_voltages_[i] = vbus_voltage;
+
+    CHECK_RW(odrive->read(serial_numbers_[0][i], IBUS, ibus));
+    hw_ibus_currents_[i] = ibus;
   }
 
   for (size_t i = 0; i < info_.joints.size(); i++) {
