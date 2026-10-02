@@ -42,6 +42,7 @@ CallbackReturn ODriveHardwareInterface::on_init(const hardware_interface::Hardwa
   hw_controller_errors_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
   hw_fet_temperatures_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
   hw_motor_temperatures_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
+  hw_velocity_setpoints_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
 
   for (const hardware_interface::ComponentInfo & sensor : info_.sensors) {
     serial_numbers_[0].emplace_back(std::stoull(sensor.parameters.at("serial_number"), 0, 16));
@@ -133,6 +134,8 @@ std::vector<hardware_interface::StateInterface> ODriveHardwareInterface::export_
       info_.joints[i].name, "fet_temperature", &hw_fet_temperatures_[i]));
     state_interfaces.emplace_back(hardware_interface::StateInterface(
       info_.joints[i].name, "motor_temperature", &hw_motor_temperatures_[i]));
+    state_interfaces.emplace_back(hardware_interface::StateInterface(
+      info_.joints[i].name, "velocity_setpoint", &hw_velocity_setpoints_[i]));
   }
 
   return state_interfaces;
@@ -289,7 +292,8 @@ return_type ODriveHardwareInterface::read(const rclcpp::Time &, const rclcpp::Du
   }
 
   for (size_t i = 0; i < info_.joints.size(); i++) {
-    float Iq_measured, vel_estimate, pos_estimate, fet_temperature, motor_temperature;
+    float Iq_measured, vel_estimate, vel_setpoint, pos_estimate, fet_temperature,
+      motor_temperature;
     int32_t axis_error, motor_error, encoder_error, controller_error;
 
     CHECK_RW(odrive->read(
@@ -301,6 +305,11 @@ return_type ODriveHardwareInterface::read(const rclcpp::Time &, const rclcpp::Du
       serial_numbers_[1][i], AXIS__ENCODER__VEL_ESTIMATE + per_axis_offset * axes_[i],
       vel_estimate));
     hw_velocities_[i] = directions_[i] * vel_estimate * 2 * M_PI;
+
+    CHECK_RW(odrive->read(
+      serial_numbers_[1][i], AXIS__CONTROLLER__VEL_SETPOINT + per_axis_offset * axes_[i],
+      vel_setpoint));
+    hw_velocity_setpoints_[i] = directions_[i] * vel_setpoint * 2 * M_PI;
 
     CHECK_RW(odrive->read(
       serial_numbers_[1][i], AXIS__ENCODER__POS_ESTIMATE + per_axis_offset * axes_[i],
