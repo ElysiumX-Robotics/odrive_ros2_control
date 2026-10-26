@@ -102,6 +102,7 @@ private:
   std::vector<double> hw_positions_;
   std::vector<double> hw_velocities_;
   std::vector<double> hw_efforts_;
+  std::vector<double> hw_velocity_setpoints_;
 
   std::vector<double> hw_axis_errors_;
   std::vector<double> hw_motor_errors_;
