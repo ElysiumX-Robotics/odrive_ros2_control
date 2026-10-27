@@ -30,7 +30,10 @@
 #define ODRIVE_IN_ENDPOINT 0x83
 
 #define ODRIVE_PROTOCOL_VERSION 1
-#define ODRIVE_MAX_PACKET_SIZE 16
+#define ODRIVE_MAX_PACKET_SIZE 64
+
+#define ODRIVE_TRANSFER_ATTEMPTS 3
+#define ODRIVE_MAX_STALE_RESPONSES 4
 
 typedef std::vector<uint8_t> bytes;
 
@@ -55,7 +58,7 @@ private:
 
   std::map<int64_t, libusb_device_handle *> odrive_map_;
 
-  short sequence_number_;
+  uint16_t sequence_number_;
 
   template <typename T>
   int read(libusb_device_handle * odrive_handle, short endpoint_id, T & value);
@@ -66,6 +69,9 @@ private:
   int endpointOperation(
     libusb_device_handle * odrive_handle, short endpoint_id, short response_size,
     bytes request_payload, bytes & response_payload, bool MSB);
+  int transferPacket(
+    libusb_device_handle * odrive_handle, short endpoint_id, short response_size,
+    const bytes & request_payload, bytes & response_payload, bool MSB);
 
   bytes encodePacket(
     short sequence_number, short endpoint_id, short response_size, const bytes & request_payload);
